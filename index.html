@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Enigma-Simulator mit einem Rotor</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Courier+Prime&display=swap');
+  body {
+    margin: 0;
+    height: 100vh;
+    background: #000000; /* 완전 검은색 배경 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Courier Prime', monospace;
+    color: #fff;
+    text-shadow:
+      0 0 5px #fff,
+      0 0 10px #fff,
+      0 0 20px #fff,
+      0 0 40px #fff,
+      0 0 80px #fff;
+  }
+  .container {
+    background: #111111cc; /* 반투명 검은색 배경 */
+    padding: 2rem 3rem;
+    border-radius: 12px;
+    box-shadow: 0 0 20px #fff8;
+    max-width: 480px;
+    width: 100%;
+    text-align: center;
+  }
+  h1 {
+    margin-bottom: 1.5rem;
+    font-weight: 700;
+    color: #fff;
+    text-shadow:
+      0 0 7px #fff,
+      0 0 15px #fff,
+      0 0 30px #fff;
+  }
+  input[type="text"] {
+    width: 100%;
+    padding: 0.6rem 0.8rem;
+    font-size: 1.2rem;
+    border-radius: 6px;
+    border: none;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    background: #222;
+    color: #fff;
+    text-shadow:
+      0 0 3px #fff;
+  }
+  input::placeholder {
+    color: #ccc;
+    text-shadow: none;
+    opacity: 1;
+  }
+  button {
+    cursor: pointer;
+    font-size: 1.1rem;
+    padding: 0.6rem 1.2rem;
+    border: none;
+    border-radius: 6px;
+    margin: 0 0.5rem 1rem;
+    background: #000;
+    color: #fff;
+    font-weight: 600;
+    box-shadow:
+      0 0 5px #fff,
+      0 0 10px #fff;
+    transition: box-shadow 0.3s ease;
+    min-width: 120px;
+  }
+  button:hover {
+    box-shadow:
+      0 0 10px #fff,
+      0 0 20px #fff,
+      0 0 40px #fff;
+  }
+  .output-container {
+    margin-top: 1rem;
+    text-align: left;
+  }
+  .output-label {
+    font-weight: 700;
+    margin-bottom: 0.3rem;
+    color: #fff;
+    text-shadow:
+      0 0 5px #fff;
+  }
+  .output-box {
+    background: #000;
+    padding: 1rem;
+    border-radius: 8px;
+    min-height: 2.5rem;
+    font-size: 1.2rem;
+    letter-spacing: 2px;
+    user-select: all;
+    white-space: pre-wrap;
+    word-break: break-word;
+    position: relative;
+    color: #fff;
+    text-shadow:
+      0 0 5px #fff,
+      0 0 10px #fff,
+      0 0 20px #fff;
+  }
+  .copy-btn {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    background: transparent;
+    border: 1px solid #fff;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 700;
+    opacity: 0.8;
+    transition: opacity 0.2s, box-shadow 0.3s;
+    text-shadow: none;
+  }
+  .copy-btn:hover {
+    opacity: 1;
+    box-shadow:
+      0 0 8px #fff,
+      0 0 12px #fff;
+  }
+  .output-wrapper {
+    position: relative;
+    margin-bottom: 1rem;
+  }
+  .rotor-info {
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    font-family: monospace;
+    background: #000;
+    padding: 0.5rem 0.8rem;
+    border-radius: 6px;
+    word-break: break-all;
+    color: #fff;
+    text-shadow:
+      0 0 5px #fff,
+      0 0 10px #fff;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Enigma-Simulator</h1>
+  <input id="inputText" type="text" placeholder="Großbuchstaben A-Z eingeben" maxlength="100" autocomplete="off" />
+  <div>
+    <button id="encryptBtn">Verschlüsseln</button>
+    <button id="decryptBtn">Entschlüsseln</button>
+  </div>
+
+  <div class="output-container">
+    <div class="output-label">Verschlüsseltes Ergebnis:</div>
+    <div class="output-wrapper">
+      <div id="encryptedOutput" class="output-box"></div>
+      <button class="copy-btn" data-target="encryptedOutput" title="Kopieren">Copy</button>
+    </div>
+  </div>
+
+  <div class="output-container">
+    <div class="output-label">Entschlüsseltes Ergebnis:</div>
+    <div class="output-wrapper">
+      <div id="decryptedOutput" class="output-box"></div>
+      <button class="copy-btn" data-target="decryptedOutput" title="Kopieren">Copy</button>
+    </div>
+  </div>
+
+  <div class="rotor-info" id="rotorInfo"></div>
+</div>
+
+<script>
+const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+function generateRandomRotor() {
+  const arr = alphabet.split('');
+  for (let i = arr.length -1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr.join('');
+}
+
+const reflector = "YRUHQSLDPXNGOKMIEBFZCWVJAT";
+
+let rotor1;
+let rotorPositions = [0];
+let rotorInitialPositions = [0];
+
+function initializeRotors() {
+  rotor1 = generateRandomRotor();
+  rotorPositions = [0];
+  rotorInitialPositions = [0];
+  showRotorInfo();
+}
+
+function showRotorInfo() {
+  const info = `<strong>Rotor 1:</strong> ${rotor1}`;
+  document.getElementById("rotorInfo").innerHTML = info;
+}
+
+function rotateRotors() {
+  rotorPositions[0] = (rotorPositions[0] + 1) % 26;
+}
+
+function encodeChar(c) {
+  if (!alphabet.includes(c)) return c;
+
+  let idx = alphabet.indexOf(c);
+
+  // Vorwärts durch Rotor
+  idx = (idx + rotorPositions[0]) % 26;
+  idx = alphabet.indexOf(rotor1[idx]);
+
+  // Reflektor
+  idx = alphabet.indexOf(reflector[idx]);
+
+  // Rückwärts durch Rotor
+  idx = (rotor1.indexOf(alphabet[idx]) - rotorPositions[0] + 26) % 26;
+
+  return alphabet[idx];
+}
+
+function processText(text) {
+  rotorPositions = [...rotorInitialPositions];
+  let result = "";
+  for (let char of text) {
+    if (alphabet.includes(char)) {
+      result += encodeChar(char);
+      rotateRotors();
+    } else {
+      result += char;
+    }
+  }
+  return result;
+}
+
+document.getElementById("encryptBtn").addEventListener("click", () => {
+  initializeRotors();
+  const input = document.getElementById("inputText").value.toUpperCase();
+  if(!input) {
+    alert("Bitte geben Sie einen Text ein!");
+    return;
+  }
+  rotorInitialPositions = [0];
+  const output = processText(input);
+  document.getElementById("encryptedOutput").innerText = output;
+  document.getElementById("decryptedOutput").innerText = "";
+});
+
+document.getElementById("decryptBtn").addEventListener("click", () => {
+  if (!rotor1) {
+    alert("Bitte zuerst verschlüsseln, um Rotor-Einstellungen zu erstellen.");
+    return;
+  }
+  const input = document.getElementById("inputText").value.toUpperCase();
+  if(!input) {
+    alert("Bitte geben Sie einen Text ein!");
+    return;
+  }
+  const output = processText(input);
+  document.getElementById("decryptedOutput").innerText = output;
+});
+
+// 복사 버튼 이벤트
+document.querySelectorAll(".copy-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const targetId = btn.getAttribute("data-target");
+    const text = document.getElementById(targetId).innerText;
+    if (!text) return alert("Kein Text zum Kopieren.");
+    navigator.clipboard.writeText(text).then(() => {
+      btn.innerText = "Kopiert!";
+      setTimeout(() => btn.innerText = "Copy", 1500);
+    }).catch(() => alert("Kopieren fehlgeschlagen."));
+  });
+});
+</script>
+
+</body>
+</html>
